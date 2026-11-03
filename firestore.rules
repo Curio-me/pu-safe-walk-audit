@@ -1,0 +1,240 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 0: Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'rajavikrant.developer@gmail.com'
+      );
+    }
+
+    // Validation Blueprint: AdminRecord
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['role', 'createdAt'])
+        && data.keys().hasOnly(['role', 'createdAt'])
+        && data.role is string && data.role.size() >= 1 && data.role.size() <= 64
+        && data.createdAt is timestamp;
+    }
+
+    // Validation Blueprint: SafetyReport
+    function isValidReport(data) {
+      return data.keys().hasAll([
+          'title',
+          'corridorName',
+          'category',
+          'severity',
+          'status',
+          'authority',
+          'description',
+          'lightingCondition',
+          'cctvPhase3Candidate',
+          'peakRiskWindow',
+          'upvotes',
+          'placeSearchQuery',
+          'lat',
+          'lng',
+          'authorId',
+          'isPublic',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'title',
+          'corridorName',
+          'category',
+          'severity',
+          'status',
+          'authority',
+          'description',
+          'lightingCondition',
+          'cctvPhase3Candidate',
+          'peakRiskWindow',
+          'upvotes',
+          'placeSearchQuery',
+          'secondarySearchQuery',
+          'lat',
+          'lng',
+          'formattedAddress',
+          'placeId',
+          'sourceCitation',
+          'officialRemarks',
+          'authorId',
+          'isPublic',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.title is string && data.title.size() >= 3 && data.title.size() <= 200
+        && data.corridorName is string && data.corridorName.size() >= 2 && data.corridorName.size() <= 160
+        && data.category is string && data.category.size() <= 40 && data.category in ['dark_stretch', 'cctv_blind_spot', 'vehicular_harassment', 'canopy_obstruction']
+        && data.severity is string && data.severity.size() <= 20 && data.severity in ['critical', 'high', 'moderate']
+        && data.status is string && data.status.size() <= 30 && data.status in ['reported', 'escalated', 'work_order_issued', 'resolved']
+        && data.authority is string && data.authority.size() <= 80 && data.authority in [
+          'PU Electrical Department',
+          'Chief of University Security',
+          'Dean Student Welfare (DSW)',
+          'PUCSC Student Council',
+          'Internal Complaints Committee (ICC)'
+        ]
+        && data.description is string && data.description.size() >= 3 && data.description.size() <= 1500
+        && data.lightingCondition is string && data.lightingCondition.size() >= 2 && data.lightingCondition.size() <= 300
+        && data.cctvPhase3Candidate is bool
+        && data.peakRiskWindow is string && data.peakRiskWindow.size() >= 2 && data.peakRiskWindow.size() <= 100
+        && data.upvotes is int && data.upvotes >= 1 && data.upvotes <= 100000
+        && data.placeSearchQuery is string && data.placeSearchQuery.size() >= 2 && data.placeSearchQuery.size() <= 240
+        && (!('secondarySearchQuery' in data) || (data.secondarySearchQuery is string && data.secondarySearchQuery.size() <= 240))
+        && data.lat is number && data.lat >= 30.735 && data.lat <= 30.770
+        && data.lng is number && data.lng >= 76.745 && data.lng <= 76.780
+        && (!('formattedAddress' in data) || (data.formattedAddress is string && data.formattedAddress.size() <= 300))
+        && (!('placeId' in data) || (data.placeId is string && data.placeId.size() <= 200))
+        && (!('sourceCitation' in data) || (data.sourceCitation is string && data.sourceCitation.size() <= 240))
+        && (!('officialRemarks' in data) || (data.officialRemarks is string && data.officialRemarks.size() <= 600))
+        && data.authorId is string && data.authorId.size() >= 1 && data.authorId.size() <= 128 && data.authorId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.isPublic is bool && data.isPublic == true
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Validation Blueprint: FieldObservation
+    function isValidObservation(data) {
+      return data.keys().hasAll([
+          'reportId',
+          'authorId',
+          'authorRole',
+          'note',
+          'isPublic',
+          'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'reportId',
+          'authorId',
+          'authorRole',
+          'note',
+          'isPublic',
+          'createdAt'
+        ])
+        && data.reportId is string && data.reportId.size() >= 1 && data.reportId.size() <= 128 && data.reportId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.authorId is string && data.authorId.size() >= 1 && data.authorId.size() <= 128 && data.authorId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.authorRole is string && data.authorRole.size() >= 1 && data.authorRole.size() <= 120
+        && data.note is string && data.note.size() >= 1 && data.note.size() <= 1000
+        && data.isPublic is bool && data.isPublic == true
+        && data.createdAt is timestamp;
+    }
+
+    // Validation Blueprint: VoteRecord (One-vote-per-device lock)
+    function isValidVoteRecord(data) {
+      return data.keys().hasAll(['reportId', 'deviceId', 'createdAt'])
+        && data.keys().hasOnly(['reportId', 'deviceId', 'createdAt'])
+        && data.reportId is string && data.reportId.size() >= 1 && data.reportId.size() <= 128 && data.reportId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.deviceId is string && data.deviceId.size() >= 1 && data.deviceId.size() <= 128 && data.deviceId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.createdAt is timestamp;
+    }
+
+    // Collection: /admins/{adminId}
+    match /admins/{adminId} {
+      allow get: if isVerifiedUser() && isValidId(adminId) && request.auth.uid == adminId;
+      allow list: if false;
+      allow create: if isAdmin() && isValidId(adminId) && isValidAdminRecord(incoming()) && incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // Collection: /reports/{reportId}
+    match /reports/{reportId} {
+      allow get: if isValidId(reportId) && (resource == null || existing().isPublic == true);
+      allow list: if resource.data.isPublic == true;
+
+      allow create: if isValidId(reportId)
+        && isValidReport(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isValidId(reportId)
+        && isValidReport(incoming())
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (existing().status != 'resolved' || isAdmin())
+        && (
+          // Action 1: Student Upvote (+1 confirmation only)
+          (incoming().diff(existing()).affectedKeys().hasOnly(['upvotes', 'updatedAt'])
+            && incoming().upvotes == existing().upvotes + 1)
+          ||
+          // Action 2: Places API Coordinate Resolution
+          (incoming().diff(existing()).affectedKeys().hasOnly(['lat', 'lng', 'formattedAddress', 'placeId', 'updatedAt']))
+          ||
+          // Action 3: Status Update
+          (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'officialRemarks', 'updatedAt']))
+          ||
+          // Action 4: Admin Full Override
+          isAdmin()
+        );
+
+      allow delete: if isAdmin() && isValidId(reportId);
+
+      // Subcollection: /reports/{reportId}/observations/{observationId}
+      match /observations/{observationId} {
+        allow get: if isValidId(reportId)
+          && isValidId(observationId)
+          && (resource == null || existing().isPublic == true)
+          && get(/databases/$(database)/documents/reports/$(reportId)).data.isPublic == true;
+
+        allow list: if resource.data.isPublic == true;
+
+        allow create: if isValidId(reportId)
+          && isValidId(observationId)
+          && isValidObservation(incoming())
+          && incoming().reportId == reportId
+          && incoming().createdAt == request.time
+          && exists(/databases/$(database)/documents/reports/$(reportId))
+          && get(/databases/$(database)/documents/reports/$(reportId)).data.status != 'resolved';
+
+        allow update, delete: if false;
+      }
+
+      // Subcollection: /reports/{reportId}/votes/{deviceId} (Immutable 1-vote-per-device lock)
+      match /votes/{deviceId} {
+        allow get: if isValidId(reportId)
+          && isValidId(deviceId)
+          && (resource == null || existing().deviceId == deviceId);
+
+        allow list: if false;
+
+        allow create: if isValidId(reportId)
+          && isValidId(deviceId)
+          && isValidVoteRecord(incoming())
+          && incoming().reportId == reportId
+          && incoming().deviceId == deviceId
+          && incoming().createdAt == request.time
+          && !exists(/databases/$(database)/documents/reports/$(reportId)/votes/$(deviceId))
+          && exists(/databases/$(database)/documents/reports/$(reportId));
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}

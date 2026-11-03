@@ -1,0 +1,279 @@
+{
+  "entities": {
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted campus safety coordinator or administrator record.",
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "description": "Administrator role label",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when admin record was provisioned"
+        }
+      },
+      "required": ["role", "createdAt"]
+    },
+    "SafetyReport": {
+      "title": "SafetyReport",
+      "description": "Crowdsourced Panjab University campus dark spot or safety concern report.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Short summary title of the safety concern",
+          "minLength": 3,
+          "maxLength": 200
+        },
+        "corridorName": {
+          "type": "string",
+          "description": "Campus road, hostel stretch, or building area name",
+          "minLength": 2,
+          "maxLength": 160
+        },
+        "category": {
+          "type": "string",
+          "description": "Type of campus safety hazard",
+          "enum": [
+            "dark_stretch",
+            "cctv_blind_spot",
+            "vehicular_harassment",
+            "canopy_obstruction"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "description": "Urgency level of the safety concern",
+          "enum": ["critical", "high", "moderate"]
+        },
+        "status": {
+          "type": "string",
+          "description": "Current resolution state with PU authorities",
+          "enum": ["reported", "escalated", "work_order_issued", "resolved"]
+        },
+        "authority": {
+          "type": "string",
+          "description": "Responsible Panjab University department",
+          "enum": [
+            "PU Electrical Department",
+            "Chief of University Security",
+            "Dean Student Welfare (DSW)",
+            "PUCSC Student Council",
+            "Internal Complaints Committee (ICC)"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed student observation of the dark spot or safety risk",
+          "minLength": 3,
+          "maxLength": 1500
+        },
+        "lightingCondition": {
+          "type": "string",
+          "description": "Observed streetlight and illumination status",
+          "minLength": 2,
+          "maxLength": 300
+        },
+        "cctvPhase3Candidate": {
+          "type": "boolean",
+          "description": "Whether the spot needs a Phase-3 CCTV camera"
+        },
+        "peakRiskWindow": {
+          "type": "string",
+          "description": "Time window when students face the highest risk",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "upvotes": {
+          "type": "integer",
+          "description": "Number of students who confirmed they walk this stretch"
+        },
+        "placeSearchQuery": {
+          "type": "string",
+          "description": "Google Maps Places search query within Panjab University",
+          "minLength": 2,
+          "maxLength": 240
+        },
+        "secondarySearchQuery": {
+          "type": "string",
+          "description": "Optional secondary landmark query for corridor midpoint",
+          "minLength": 0,
+          "maxLength": 240
+        },
+        "lat": {
+          "type": "number",
+          "description": "Latitude within Panjab University Chandigarh jurisdiction (30.735 to 30.770)"
+        },
+        "lng": {
+          "type": "number",
+          "description": "Longitude within Panjab University Chandigarh jurisdiction (76.745 to 76.780)"
+        },
+        "formattedAddress": {
+          "type": "string",
+          "description": "Resolved address from Google Maps Places API",
+          "minLength": 0,
+          "maxLength": 300
+        },
+        "placeId": {
+          "type": "string",
+          "description": "Resolved Google Maps Place ID",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "sourceCitation": {
+          "type": "string",
+          "description": "Reference to Times of India report or student audit batch",
+          "minLength": 0,
+          "maxLength": 240
+        },
+        "officialRemarks": {
+          "type": "string",
+          "description": "Remarks on escalation or repair status",
+          "minLength": 0,
+          "maxLength": 600
+        },
+        "authorId": {
+          "type": "string",
+          "description": "Anonymous device ID of the student who created the report",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Flag indicating the campus safety report is publicly readable"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when report was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when report was last updated"
+        }
+      },
+      "required": [
+        "title",
+        "corridorName",
+        "category",
+        "severity",
+        "status",
+        "authority",
+        "description",
+        "lightingCondition",
+        "cctvPhase3Candidate",
+        "peakRiskWindow",
+        "upvotes",
+        "placeSearchQuery",
+        "lat",
+        "lng",
+        "authorId",
+        "isPublic",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "FieldObservation": {
+      "title": "FieldObservation",
+      "description": "Student comment or confirmation note attached to a campus safety report.",
+      "type": "object",
+      "properties": {
+        "reportId": {
+          "type": "string",
+          "description": "ID of the parent safety report",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authorId": {
+          "type": "string",
+          "description": "Anonymous device ID of the student submitting the observation",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authorRole": {
+          "type": "string",
+          "description": "Student hostel or department affiliation label (non-PII)",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "note": {
+          "type": "string",
+          "description": "Student observation note about the dark stretch",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Flag indicating the observation is publicly readable"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when observation was recorded"
+        }
+      },
+      "required": [
+        "reportId",
+        "authorId",
+        "authorRole",
+        "note",
+        "isPublic",
+        "createdAt"
+      ]
+    },
+    "VoteRecord": {
+      "title": "VoteRecord",
+      "description": "One-vote-per-device lock record preventing duplicate +1 taps on the same report.",
+      "type": "object",
+      "properties": {
+        "reportId": {
+          "type": "string",
+          "description": "ID of the parent safety report",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "deviceId": {
+          "type": "string",
+          "description": "Anonymous student device identifier",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the vote was cast"
+        }
+      },
+      "required": ["reportId", "deviceId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Stores verified administrator UIDs for Panjab University safety audit coordinators."
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/SafetyReport" },
+      "description": "Stores Panjab University campus dark spot and safety hazard reports."
+    },
+    "/reports/{reportId}/observations/{observationId}": {
+      "schema": { "$ref": "#/entities/FieldObservation" },
+      "description": "Stores student field observations and confirmation comments for a specific report."
+    },
+    "/reports/{reportId}/votes/{deviceId}": {
+      "schema": { "$ref": "#/entities/VoteRecord" },
+      "description": "Stores one-vote-per-device deduplication locks for each safety report."
+    }
+  }
+}

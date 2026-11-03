@@ -1,0 +1,6 @@
+{
+  "name": "PU SafeWalk — Panjab University Dark-Spot & Safety Ledger",
+  "description": "Crowdsourced campus lighting audit, dark-stretch mapping, and authority reporting system for Panjab University, Chandigarh.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
